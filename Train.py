@@ -2,7 +2,6 @@ import boto3, logging
 from Nomenclature import *
 from train_helper import generate_job_id, upload_file_to_s3, create_train_clf_stack
 
-#version git
 class Train:
     def __init__(self,
                  bucket,

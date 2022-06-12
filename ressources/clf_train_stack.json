@@ -1,0 +1,188 @@
+{
+    "AWSTemplateFormatVersion": "2010-09-09",
+    "Metadata": {
+        "AWS::CloudFormation::Designer": {
+            "a389d08d-4f7a-4e4d-8bab-02d5a1e84cb0": {
+                "size": {
+                    "width": 60,
+                    "height": 60
+                },
+                "position": {
+                    "x": 335,
+                    "y": 121
+                },
+                "z": 0
+            }
+        }
+    },
+    "Parameters" : {
+        "RoleTrainNameParameter" : {
+            "Type" : "String",
+            "Description" : "Nom unique du role à utiliser"
+        },
+        "InstanceProfilNameParameter" :{
+            "Type" : "String",
+            "Description" : "Nom unique du profil iam à attacher à l'ec2 pour acceder à s3"
+        },
+        "LbdTrainNameParameter" : {
+            "Type" : "String",
+            "Description" : "Nom unique de la lambda"
+          },
+        "S3BucketParameter" : {
+          "Type" : "String",
+          "Description" : "Bucket S3 contenant le zip de la lambda"
+        },
+        "S3KeyParameter" : {
+            "Type" : "String",
+            "Description" : "chemin s3 où trouver le code de la lambda"
+        },
+        "InstanceTypeParameter" : {
+            "Type" : "String",
+            "Description" : "type de l instance EC2"
+        },
+        "AmiParameter" : {
+            "Type" : "String",
+            "Description" : "image AMI à utiliser"
+        },
+        "regionParameter" : {
+            "Type" : "String",
+            "Default" : "eu-west-3",
+            "Description" : "region dans où deployer la ressource lambda"
+        },
+        "TrainScriptKeyParameter" : {
+            "Type" : "String",
+            "Description" : "key S3 contenant le script d entrainement"
+        },
+        "RequirementScriptKeyParameter" : {
+            "Type" : "String",
+            "Description" : "key S3 contenant le fichier requirement.txt"
+        },
+        "DeviceSizeParameter" : {
+            "Type" : "Number",
+            "Description" : "key S3 contenant le fichier requirement.txt"
+        }
+    },
+    "Resources": {
+        "TrainRole":{
+                "Type" : "AWS::IAM::Role",
+                "Properties" : {
+                    "RoleName" : { "Ref" : "RoleTrainNameParameter" },
+                    "AssumeRolePolicyDocument" : {
+                        "Version": "2012-10-17",
+                        "Statement": [
+                            {
+                                "Effect": "Allow",
+                                "Action": [
+                                    "sts:AssumeRole"
+                                ],
+                                "Principal": {
+                                    "Service": [
+                                        "lambda.amazonaws.com",
+                                        "ec2.amazonaws.com"
+                                    ]
+                                }
+                            }
+                        ]
+                    },
+                    "Policies" : [
+                        {
+                            "PolicyName" : "TrainS3AccessPolicy",
+                            "PolicyDocument" : {
+                                "Version": "2012-10-17",
+                                "Statement": [
+                                    {
+                                        "Effect": "Allow",
+                                        "Action": [
+                                            "s3:*"
+                                        ],
+                                        "Resource":"arn:aws:s3:::*"
+                                    }
+                                ]
+                            }
+                        },
+                        {
+                            "PolicyName" : "TrainLambdaAccessPolicy",
+                            "PolicyDocument" : {
+                                "Version": "2012-10-17",
+                                "Statement": [
+                                    {
+                                        "Effect": "Allow",
+                                        "Action": [
+                                            "lambda:*"
+                                        ],
+                                        "Resource":"arn:aws:lambda:*"
+                                    }
+                                ]
+                            }
+                        },
+                        {
+                            "PolicyName" : "TrainEC2AccessPolicy",
+                            "PolicyDocument" : {
+                                "Version": "2012-10-17",
+                                "Statement": [
+                                    {
+                                        "Effect": "Allow",
+                                        "Action": [
+                                            "ec2:*"
+                                        ],
+                                        "Resource":"*"
+                                    }
+                                ]
+                            }
+                        }
+                    ],
+                    "Description" : "Role IAM pour les ressources de la partie train",
+                    "Tags" : [
+                        {
+                            "Key" : "ENV",
+                            "Value" : "Train"
+                          }
+                    ]
+                  }
+        },
+        "InstanceProfile":{
+            "Type" : "AWS::IAM::InstanceProfile",
+            "Properties" : {
+                "InstanceProfileName" : { "Ref" : "InstanceProfilNameParameter" },
+                "Roles" : [
+                    { "Ref" : "RoleTrainNameParameter" }
+                ]
+              }
+          },
+        "TrainLbd": {
+            "Type": "AWS::Lambda::Function",
+            "Properties": {
+                "FunctionName": { "Ref" : "LbdTrainNameParameter" },
+                "Handler": "lambda_train/lambda_function.lambda_handler",
+                "Code":{
+                    "S3Bucket": { "Ref" : "S3BucketParameter" },
+                    "S3Key": { "Ref" : "S3KeyParameter" }
+                },
+                "Environment":{
+                    "Variables":{
+                        "INSTANCE_TYPE": { "Ref" : "InstanceTypeParameter" },
+                        "REGION": { "Ref" : "regionParameter" },
+                        "AMI": { "Ref" : "AmiParameter" },
+                        "DEVICE_SIZE": { "Ref" : "DeviceSizeParameter" },
+                        "REQUIREMENT_SCRIPT_KEY": {"Fn::Join" : ["/",["s3:/", { "Ref" : "RequirementScriptKeyParameter" }]]},
+                        "TRAIN_SCRIPT_KEY" : {"Fn::Join" : ["/",["s3:/", { "Ref" : "TrainScriptKeyParameter" }]]},
+                        "INSTANCE_PROFIL_NAME": { "Ref" : "InstanceProfilNameParameter" }
+                    }
+                },
+                "Timeout":60,
+                "Runtime":"python3.6",
+                "Role":{ "Fn::GetAtt" : [ "TrainRole", "Arn" ] },
+                "Description": "Lancer une EC2, installer les lib necessaires et lancer le script d entrainement",
+                "Tags":[
+                    {
+                        "Key" : "ENV",
+                        "Value" : "Train"
+                    }
+                ],
+                "TracingConfig":{
+                    "Mode": "Active"
+                }
+            }
+        }
+    }
+}
