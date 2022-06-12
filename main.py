@@ -3,7 +3,7 @@ from Train import *
 
 #test branch
 if __name__ == "__main__":
-    local_rep = "C:/Users/lounhadja/PycharmProjects/PA_TDV/repos"
+    local_rep = "ressources"
     bucket = "pa-2022"
     template_stack_local_path = f"{local_rep}/clf_train_stack.json"
     train_script_local_path = f"{local_rep}/train_script.py"
@@ -28,7 +28,7 @@ if __name__ == "__main__":
 
     print(create_ressources_response)
 
-    lunch_train_response = train_object.lunch_train()
+    #lunch_train_response = train_object.lunch_train()
 
 
 
