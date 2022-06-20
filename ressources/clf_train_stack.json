@@ -16,6 +16,10 @@
         }
     },
     "Parameters" : {
+        "JobID": {
+            "Type" : "String",
+            "Description" : "ID unique d'entrainement "
+        },
         "RoleTrainNameParameter" : {
             "Type" : "String",
             "Description" : "Nom unique du role à utiliser"
@@ -129,6 +133,80 @@
                                     }
                                 ]
                             }
+                        },
+                        {
+                            "PolicyName" : "TrainSSMAccessPolicy",
+                            "PolicyDocument" : {
+                                    "Version": "2012-10-17",
+                                    "Statement": [
+                                        {
+                                            "Effect": "Allow",
+                                            "Action": [
+                                                "cloudwatch:PutMetricData",
+                                                "ds:CreateComputer",
+                                                "ds:DescribeDirectories",
+                                                "ec2:DescribeInstanceStatus",
+                                                "logs:*",
+                                                "ssm:*",
+                                                "ec2messages:*"
+                                            ],
+                                            "Resource": "*"
+                                        },
+                                        {
+                                            "Effect": "Allow",
+                                            "Action": "iam:CreateServiceLinkedRole",
+                                            "Resource": "arn:aws:iam::*:role/aws-service-role/ssm.amazonaws.com/AWSServiceRoleForAmazonSSM*",
+                                            "Condition": {
+                                                "StringLike": {
+                                                    "iam:AWSServiceName": "ssm.amazonaws.com"
+                                                }
+                                            }
+                                        },
+                                        {
+                                            "Effect": "Allow",
+                                            "Action": [
+                                                "iam:DeleteServiceLinkedRole",
+                                                "iam:GetServiceLinkedRoleDeletionStatus"
+                                            ],
+                                            "Resource": "arn:aws:iam::*:role/aws-service-role/ssm.amazonaws.com/AWSServiceRoleForAmazonSSM*"
+                                        },
+                                        {
+                                            "Effect": "Allow",
+                                            "Action": [
+                                                "ssmmessages:CreateControlChannel",
+                                                "ssmmessages:CreateDataChannel",
+                                                "ssmmessages:OpenControlChannel",
+                                                "ssmmessages:OpenDataChannel"
+                                            ],
+                                            "Resource": "*"
+                                        }
+                                    ]
+                                }
+                        },
+                        {
+                            "PolicyName" : "TrainIAMAccessPolicy",
+                            "PolicyDocument" : {
+                                    "Version": "2012-10-17",
+                                    "Statement": [
+                                        {
+                                            "Effect": "Allow",
+                                            "Action": [
+                                                "iam:*",
+                                                "organizations:DescribeAccount",
+                                                "organizations:DescribeOrganization",
+                                                "organizations:DescribeOrganizationalUnit",
+                                                "organizations:DescribePolicy",
+                                                "organizations:ListChildren",
+                                                "organizations:ListParents",
+                                                "organizations:ListPoliciesForTarget",
+                                                "organizations:ListRoots",
+                                                "organizations:ListPolicies",
+                                                "organizations:ListTargetsForPolicy"
+                                            ],
+                                            "Resource": "*"
+                                        }
+                                        ]
+                            }
                         }
                     ],
                     "Description" : "Role IAM pour les ressources de la partie train",
@@ -164,9 +242,10 @@
                         "REGION": { "Ref" : "regionParameter" },
                         "AMI": { "Ref" : "AmiParameter" },
                         "DEVICE_SIZE": { "Ref" : "DeviceSizeParameter" },
-                        "REQUIREMENT_SCRIPT_KEY": {"Fn::Join" : ["/",["s3:/", { "Ref" : "RequirementScriptKeyParameter" }]]},
-                        "TRAIN_SCRIPT_KEY" : {"Fn::Join" : ["/",["s3:/", { "Ref" : "TrainScriptKeyParameter" }]]},
-                        "INSTANCE_PROFIL_NAME": { "Ref" : "InstanceProfilNameParameter" }
+                        "REQUIREMENT_SCRIPT_KEY": {"Fn::Join" : ["/",["s3:/", { "Ref" : "S3BucketParameter" }, { "Ref" : "RequirementScriptKeyParameter" }]]},
+                        "TRAIN_SCRIPT_KEY" : {"Fn::Join" : ["/",["s3:/", { "Ref" : "S3BucketParameter" }, { "Ref" : "TrainScriptKeyParameter" }]]},
+                        "INSTANCE_PROFIL_NAME": { "Ref" : "InstanceProfilNameParameter" },
+                        "JOB_ID": { "Ref" : "JobID" }
                     }
                 },
                 "Timeout":60,
