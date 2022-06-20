@@ -1,0 +1,1 @@
+[{'AvailabilityZone': 'eu-west-3c', 'InstanceId': 'i-0a6251b8d1228d112', 'InstanceState': {'Code': 16, 'Name': 'running'}, 'InstanceStatus': {'Details': [{'Name': 'reachability', 'Status': 'passed'}], 'Status': 'ok'}, 'SystemStatus': {'Details': [{'Name': 'reachability', 'Status': 'passed'}], 'Status': 'ok'}}]

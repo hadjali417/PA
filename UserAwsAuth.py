@@ -28,7 +28,7 @@ class UserAwsAuth:
         try:
             df_credential = pandas.read_csv(user_credential_file_path, sep=sep_)
             if df_credential.shape[0]==0:
-                logging.error("le ficier creatial spécifié est vide!")
+                logging.error("le fichier creatial spécifié est vide!")
                 return None
             secret_key_id = df_credential[secret_key_id_col_name][0]
             secret_access_key = df_credential[secret_access_key_col_name][0]

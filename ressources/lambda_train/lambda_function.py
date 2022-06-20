@@ -11,6 +11,8 @@ device_size = os.environ['DEVICE_SIZE']
 script_score_key = os.environ["REQUIREMENT_SCRIPT_KEY"]
 script_requirements_key = os.environ["TRAIN_SCRIPT_KEY"]
 
+JOB_ID = os.environ["JOB_ID"]
+
 EC2 = boto3.client('ec2', region_name=REGION)
 
 cmd_config = """#!/bin/bash
@@ -19,15 +21,13 @@ sudo yum install -y amazon-linux-extras
 sudo amazon-linux-extras enable python3.8
 sudo yum install python3.8 -y
 sudo yum install -y https://s3.amazonaws.com/ec2-downloads-windows/SSMAgent/latest/linux_amd64/amazon-ssm-agent.rpm
+sudo systemctl start amazon-ssm-agent
 sudo yum -y install python-pip
 pip3.8 install awscli
 mkdir appli
 chmod 777 appli
 aws s3 cp """ + script_score_key + """ appli/
 aws s3 cp """ + script_requirements_key + """ appli/
-pip3.8 install -r appli/requirements.txt
-sleep(5)
-python3.8 appli/train_script.py
 """
 
 
@@ -62,6 +62,10 @@ def lambda_handler(event, context):
                     {
                         'Key': 'Application',
                         'Value': 'PA_TDV'
+                    },
+                    {
+                        'Key': 'job_id',
+                        'Value': JOB_ID
                     }
                 ]
             }
@@ -72,6 +76,7 @@ def lambda_handler(event, context):
         Monitoring={
             'Enabled': True
         },
+        #KeyName='credential_test_pa',
         UserData=cmd_config
     )
 
