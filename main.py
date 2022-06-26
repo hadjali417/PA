@@ -21,7 +21,10 @@ if __name__ == "__main__":
     ami = "ami-021d41cbdefc0c994"
 
 
-    credential_file_path = "C:/Users/lounhadja/PycharmProjects/PA_TDV/new_user_credentials.csv"
+
+    #credential_file_path = "C:/Users/lounhadja/PycharmProjects/PA_TDV/new_user_credentials.csv"
+
+    credential_file_path = #TODO
     auth_object = UserAwsAuth(credential_file_path)
     auth_object.describe()
 
