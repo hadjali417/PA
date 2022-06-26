@@ -1,6 +1,6 @@
 import boto3, logging, time
 from botocore.exceptions import ClientError
-from Nomenclature import *
+from TrainNomenclature import *
 from train_helper import generate_job_id, upload_file_to_s3, create_train_clf_stack, progress_bar, get_ec2_instance_id, get_train_ec2_instance_status, run_ec2_command, get_command_status
 
 
@@ -29,7 +29,7 @@ class Train:
         self.access_key_id = auth_object.secret_key_id
         self.secret_access_key = auth_object.secret_access_key
         self.job_id = generate_job_id()
-        self.nomenclature_object = Nomenclature(self.job_id, self.bucket, self.region)
+        self.nomenclature_object = TrainNomenclature(self.job_id, self.bucket, self.region)
 
 
     def prepare_env(self):
@@ -49,7 +49,7 @@ class Train:
             upload_file_to_s3(s3_client, self.requirements_local_path, self.bucket, s3_requirements_location)
             upload_file_to_s3(s3_client, self.template_stack_local_path, self.bucket, s3_stack_template_location["s3_key"])
         except ClientError as cle:
-            logging.error("preparation d'enveronement echouée...")
+            logging.error("[TRAIN]:preparation d'enveronement echouée...")
             raise Exception(cle)
         return {
             "s3_lbd_key": s3_lbd_location,
@@ -137,21 +137,21 @@ class Train:
                     time.sleep(2)
                     clf_stack_status = self.get_clf_stack_status(stack_name)
                     if clf_stack_status == 'CREATE_COMPLETE':
-                        logging.info(f"statut creation CloudFormation: {clf_stack_status}")
+                        logging.info(f"[TRAIN]:statut creation CloudFormation: {clf_stack_status}")
                         return clf_stack_status
                     elif clf_stack_status == 'CREATE_IN_PROGRESS':
                         progress_bar(iter)
                         iter+=1
                     else:
-                        logging.error(f"statut creation CloudFormation: {clf_stack_status}")
-                        raise Exception("Creation stack CloudFormation echoué")
+                        logging.error(f"[TRAIN]:statut creation CloudFormation: {clf_stack_status}")
+                        raise Exception("[TRAIN]:Creation stack CloudFormation echoué")
             if invoke_mode==1:
                 create_ressources_response = {}
                 create_ressources_response['StackId'] = stack_id
                 create_ressources_response['StackName'] = stack_name
                 return create_ressources_response
         except ClientError as cle:
-            logging.error(f"creation ressources echouée!")
+            logging.error(f"[TRAIN]:creation ressources echouée!")
             raise Exception(cle)
 
 
@@ -169,7 +169,7 @@ class Train:
             )
             return clf_response['Stacks'][0]['StackStatus']
         except ClientError as cle:
-            logging.error(f"impossible d'obtenir le statut pour la stack: {stack_name}")
+            logging.error(f"[TRAIN]:impossible d'obtenir le statut pour la stack: {stack_name}")
             raise Exception(cle)
 
 

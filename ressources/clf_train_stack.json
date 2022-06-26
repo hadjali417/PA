@@ -79,7 +79,7 @@
                                 "Action": [
                                     "sts:AssumeRole"
                                 ],
-                                "Principal": {
+                                "Principal":{
                                     "Service": [
                                         "lambda.amazonaws.com",
                                         "ec2.amazonaws.com"
@@ -256,6 +256,10 @@
                     {
                         "Key" : "ENV",
                         "Value" : "Train"
+                    },
+                    {
+                        "Key" : "JOBID",
+                        "Value" : { "Ref" : "JobID" }
                     }
                 ],
                 "TracingConfig":{
