@@ -1,4 +1,4 @@
-class Nomenclature:
+class TrainNomenclature:
     def __init__(self, job_id, bucket, region):
         self.job_id = job_id
         self.bucket = bucket

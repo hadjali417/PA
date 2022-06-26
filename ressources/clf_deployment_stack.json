@@ -1,0 +1,272 @@
+{
+    "AWSTemplateFormatVersion": "2010-09-09",
+    "Metadata": {
+        "AWS::CloudFormation::Designer": {
+            "cb1e7b67-2b04-4f9d-93cc-61d47d07b33b": {
+                "size": {
+                    "width": 140,
+                    "height": 140
+                },
+                "position": {
+                    "x": 300,
+                    "y": 170
+                },
+                "z": 0
+            }
+        }
+    },
+    "Parameters" :{
+      "JobID": {
+            "Type" : "String",
+            "Description" : "ID unique de deploiement"
+      },
+      "Bucket": {
+            "Type" : "String",
+            "Description" : "Bucket où recuperer les codes de ressources"
+      },
+      "LbdS3keyParameter": {
+            "Type" : "String",
+            "Description" : "s3 key contenant le code (zip) de la lambda request processor"
+      },
+      "ModelS3KeyParameter": {
+            "Type" : "String",
+            "Description" : "s3 key contenant le code model de prediction"
+      },
+      "InputModelTypeParameter": {
+            "Type" : "String",
+            "Description" : "Type attendu en entrée du model de prédiction"
+      },
+      "DepFunctionName": {
+            "Type" : "String",
+            "Description" : "nom de la fonction backend de l'api rest"
+        },
+      "Region": {
+            "Type" : "String",
+            "Description" : "function name ",
+            "Default" : "eu-west-3"
+        },
+      "ApiDeploymentName": {
+            "Type" : "String",
+            "Description" : "Nom de l'api rest"
+        },
+      "RoleDeploymentNameParameter": {
+            "Type" : "String",
+            "Description" : "Nom unique du role à utiliser"
+        }
+    },
+    "Resources": {
+          "DeploymentRole": {
+                "Type" : "AWS::IAM::Role",
+                "Properties" : {
+                    "RoleName" : { "Ref" : "RoleDeploymentNameParameter" },
+                    "AssumeRolePolicyDocument" : {
+                        "Version": "2012-10-17",
+                        "Statement": [
+                            {
+                                "Effect": "Allow",
+                                "Action": [
+                                    "sts:AssumeRole"
+                                ],
+                                "Principal":{
+                                    "Service": [
+                                        "lambda.amazonaws.com"
+                                    ]
+                                }
+                            }
+                        ]
+                    },
+                    "Policies" : [
+                        {
+                            "PolicyName" : "DeploymentS3AccessPolicy",
+                            "PolicyDocument" : {
+                                "Version": "2012-10-17",
+                                "Statement": [
+                                    {
+                                        "Effect": "Allow",
+                                        "Action": [
+                                            "s3:*"
+                                        ],
+                                        "Resource":"arn:aws:s3:::*"
+                                    }
+                                ]
+                            }
+                        },
+                        {
+                            "PolicyName" : "DeploymentLambdaAccessPolicy",
+                            "PolicyDocument" : {
+                                "Version": "2012-10-17",
+                                "Statement": [
+                                    {
+                                        "Effect": "Allow",
+                                        "Action": [
+                                            "lambda:*"
+                                        ],
+                                        "Resource":"arn:aws:lambda:*"
+                                    }
+                                ]
+                            }
+                        }
+                    ],
+                    "Description" : "Role IAM pour les ressources de la partie deploiment",
+                    "Tags" : [
+                        {
+                            "Key" : "ENV",
+                            "Value" : "Deployment"
+                        },
+                        {
+                             "Key" : "JOBID",
+                             "Value" : {"Ref" : "JobID" }
+                        }
+                    ]
+                  }
+        },
+          "AuthInvokdeLambda": {
+            "Type": "AWS::Lambda::Permission",
+            "Properties":{
+              "Action": "lambda:InvokeFunction",
+              "FunctionName": { "Ref" : "DepFunctionName" },
+              "Principal": "apigateway.amazonaws.com",
+              "SourceArn": {
+                    "Fn::Join": [
+                      "",
+                      [
+                        "arn:aws:execute-api:",
+                        {"Ref": "Region"},
+                        ":",
+                        {"Ref" : "AWS::AccountId" },
+                        ":",
+                        {"Ref": "APIDEPLOYEMENT"},
+                        "/*/",
+                        "GET",
+                        "/",
+                        "prediction"
+                      ]
+                    ]
+              }
+            },
+            "DependsOn": "LBDREQUESTPROCESSOR"
+          },
+        "APIDEPLOYEMENT": {
+            "Type": "AWS::ApiGateway::RestApi",
+            "Properties": {
+              "Description" : "Api Rest pour recuperation des predictions",
+              "EndpointConfiguration" : {
+                  "Types" : [
+                    "REGIONAL"
+                  ]
+              },
+              "FailOnWarnings": true,
+              "Name": {"Ref" : "ApiDeploymentName" },
+              "Policy":{
+                "Version": "2012-10-17",
+                "Statement": [
+                        {
+                            "Effect": "Allow",
+                            "Principal": "*",
+                            "Action": [
+                                "execute-api:Invoke",
+                                "lambda:InvokeFunction"
+                            ],
+                            "Resource": "*"
+                        }
+                    ]
+            },
+              "Tags": [
+                 {
+                   "Key" : "ENV",
+                   "Value" : "Deployment"
+                 },
+                {
+                   "Key" : "JOBID",
+                   "Value" : {"Ref" : "JobID" }
+                 }
+              ]
+            }
+        },
+      "PREDICTIONRESSOURCE": {
+            "Type" : "AWS::ApiGateway::Resource",
+            "Properties" : {
+                "ParentId" : { "Fn::GetAtt": ["APIDEPLOYEMENT", "RootResourceId"] },
+                "PathPart" : "prediction",
+                "RestApiId" : {"Ref": "APIDEPLOYEMENT"}
+            }
+      },
+      "GETPREDICTION": {
+            "Type" : "AWS::ApiGateway::Method",
+            "Properties" : {
+              "HttpMethod" : "GET",
+              "AuthorizationType": "NONE",
+              "RequestParameters": {
+                "method.request.querystring.input_model": true
+              },
+              "Integration" : {
+                  "Type" : "AWS_PROXY",
+                  "IntegrationHttpMethod" : "POST",
+                  "Uri" : {
+                    "Fn::Join" : ["",
+                                    ["arn:aws:apigateway:",
+                                      {"Ref": "Region"},
+                                      ":",
+                                      "lambda:path/2015-03-31/functions/",
+                                      { "Fn::GetAtt" : [ "LBDREQUESTPROCESSOR", "Arn" ] },
+                                      "/invocations"
+                                    ]
+                                 ]
+                  }
+              },
+              "RestApiId" : {
+                  "Ref": "APIDEPLOYEMENT"
+              },
+              "ResourceId" : {
+                "Ref": "PREDICTIONRESSOURCE"
+              }
+            }
+      },
+      "DEPLOYRESTAPI":{
+            "Type" : "AWS::ApiGateway::Deployment",
+            "Properties" : {
+                "Description" : "deployer l'api rest, permet de rendre l'api fonctionnelle!",
+                "RestApiId" : {
+                  "Ref": "APIDEPLOYEMENT"
+                },
+                "StageName" : "apiprediction"
+              },
+             "DependsOn": "GETPREDICTION"
+      },
+      "LBDREQUESTPROCESSOR": {
+            "Type": "AWS::Lambda::Function",
+            "Properties":{
+              "FunctionName": { "Ref" : "DepFunctionName" },
+              "Handler": "lambda_deployment/lambda_function.lambda_handler",
+              "Code":{
+                    "S3Bucket": {"Ref": "Bucket"},
+                    "S3Key": {"Ref": "LbdS3keyParameter"}
+                },
+              "Environment":{
+                "Variables":{
+                  "JOBID": { "Ref" : "JobID" },
+                  "MODEL_S3_KEY": { "Ref" : "ModelS3KeyParameter" },
+                  "INPUT_MODEL_TYPE": { "Ref" : "InputModelTypeParameter" }
+                }
+              },
+              "Timeout":120,
+              "Role":{ "Fn::GetAtt" : [ "DeploymentRole", "Arn" ] },
+              "Runtime":"python3.6",
+              "Description": "Traitement de la requete de prediction",
+              "Tags":[
+                    {
+                        "Key" : "ENV",
+                        "Value" : "Deployment"
+                    },
+                    {
+                        "Key" : "JOBID",
+                        "Value" :  {"Ref" : "JobID" }
+                    }
+              ],
+              "TracingConfig":{
+                    "Mode": "Active"
+                }
+            }
+      }
+    }
+}
