@@ -1,7 +1,7 @@
-import boto3, logging, time
+import boto3, logging, time, json
 from botocore.exceptions import ClientError
 from TrainNomenclature import *
-from train_helper import generate_job_id, upload_file_to_s3, create_train_clf_stack, progress_bar, get_ec2_instance_id, get_train_ec2_instance_status, run_ec2_command, get_command_status
+from train_helper import generate_job_id, upload_file_to_s3, create_train_clf_stack, progress_bar, get_train_ec2_instance_status, run_ec2_command, get_command_status, terminate_instance, delete_clf_stack
 
 
 class Train:
@@ -185,16 +185,16 @@ class Train:
                 FunctionName=lbd_train_name,
                 InvocationType='RequestResponse'
             )
-            instance_id = get_ec2_instance_id(self.job_id, self.access_key_id, self.secret_access_key, self.region)
-            if invoke_mode==1:
+            instance_id = json.loads(invoke_lbd_response['Payload'].read())["instance_id"]
+            if invoke_mode == 1:
                 return instance_id
-            if invoke_mode==0:
+            if invoke_mode == 0:
                 iter=1
                 while(True):
                     time.sleep(2)
                     instance_status = get_train_ec2_instance_status(instance_id, self.access_key_id, self.secret_access_key, self.region)
                     if instance_status == 'running':
-                        return instance_status
+                        return instance_id
                     elif instance_status == 'pending':
                         progress_bar(iter)
                         iter+=1
@@ -205,11 +205,10 @@ class Train:
             raise Exception(cle)
 
 
-    def install_requerments(self, invoke_mode=0):
+    def install_requerments(self, instance_id, invoke_mode=0):
         if invoke_mode not in [0, 1]:
             raise Exception("valeurs acceptées pour invoke_mode: [0:synchrone, 1: asynchrone]")
         requirements_file_name = "requirements.txt"
-        instance_id = get_ec2_instance_id(self.job_id, self.access_key_id, self.secret_access_key, self.region)
         commands = [f"pip3.8 install -r /appli/{requirements_file_name}"]
         cmd_exec_response = run_ec2_command(instance_id, commands, self.access_key_id, self.secret_access_key,
                                             self.region)
@@ -231,12 +230,11 @@ class Train:
                 "status_details" : cmd_status["status_details"]
             }
 
-    def lunch_train_script(self, invoke_mode=0):
+    def lunch_train_script(self, instance_id, invoke_mode=0):
         if invoke_mode not in [0, 1]:
             raise Exception("valeurs acceptées pour invoke_mode: [0:synchrone, 1: asynchrone]")
 
         train_script_name = "train_script.py"
-        instance_id = get_ec2_instance_id(self.job_id, self.access_key_id, self.secret_access_key, self.region)
         commands = [f"sudo python3.8 /appli/{train_script_name}"]
         cmd_exec_response = run_ec2_command(instance_id, commands, self.access_key_id, self.secret_access_key,
                                             self.region)
@@ -259,6 +257,14 @@ class Train:
                 "status": "failed",
                 "status_details": cmd_status["status_details"]
             }
+
+
+    def delete_resources(self, instance_id):
+        stack_name = self.nomenclature_object.get_train_stack_name()
+        terminate_instance(instance_id, self.access_key_id, self.secret_access_key, self.region)
+        delete_clf_stack(stack_name, self.access_key_id, self.secret_access_key, self.region)
+
+
 
 
 

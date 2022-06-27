@@ -82,6 +82,7 @@ def lambda_handler(event, context):
 
     instance_id = instance['Instances'][0]['InstanceId']
     ip_address = instance['Instances'][0]['PrivateIpAddress']
-    print(instance_id)
-    print(ip_address)
-    return 0
+    return {
+        "ip_address" : ip_address,
+        "instance_id" : instance_id
+    }

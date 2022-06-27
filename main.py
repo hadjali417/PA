@@ -40,19 +40,21 @@ if __name__ == "__main__":
     create_stack_status = train_object.create_clf_stack(prep_env_response)
 
     print("\n[Train] lancement ec2...")
-    train_ec2_status = train_object.lunch_train_ec2()
+    instance_id = train_object.lunch_train_ec2()
 
+    print(instance_id)
     print("\n[Train] installation requerements...")
-    install_req_status = train_object.install_requerments()
+    install_req_status = train_object.install_requerments(instance_id)
 
 
     install_req_status["status"] = "Success"
     if install_req_status["status"]=="Success":
         print("\n[Train] entrainement model...")
-        train_status = train_object.lunch_train_script()
+        train_status = train_object.lunch_train_script(instance_id)
         if train_status["status"] == "Success":
             print("\n========>train finished!")
 
+    train_object.delete_resources(instance_id)
 
     ##################################################################################################
     ###################################Partie Deploiement############################################
@@ -70,5 +72,3 @@ if __name__ == "__main__":
     api_url = DeployObject.deploy(deployment_prepare_env)
 
     print(api_url)
-
-
