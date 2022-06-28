@@ -1,37 +1,29 @@
-from UserAwsAuth import *
-from Train import *
-from Deploy import *
-from deployment_helper import get_api_endpoint
+from easyTDV import UserAwsAuth as Ath
+from easyTDV import Train as T
+from easyTDV import Deploy as D
+
 
 if __name__ == "__main__":
-    #######A l'utilisateur de les declarer########
     bucket = "pa-2022"
     device_size = "2"
-    region = "eu-west-3"
     instance_type = "t2.micro"
     input_model_type = "int"
     model_s3_key = "...."
     #############################################
-    local_rep = "ressources"
-    template_stack_local_path = f"{local_rep}/clf_train_stack.json"
+
+    local_rep = "C:/Users/lounhadja/PycharmProjects/PA_TDV/test_pip_easyTDV2/mes_scripts"
     train_script_local_path = f"{local_rep}/train_script.py"
     requirements_local_path = f"{local_rep}/requirements.txt"
-    train_lbd_local_path = f"{local_rep}/lambda_train.zip"
-
-    ami = "ami-021d41cbdefc0c994"
-
 
     credential_file_path = "C:/Users/lounhadja/PycharmProjects/PA_TDV/new_user_credentials.csv"
-    auth_object = UserAwsAuth(credential_file_path)
+    auth_object = Ath.UserAwsAuth(credential_file_path)
     auth_object.describe()
-
 
     ##################################################################################################
     ################################### Partie entrainement############################################
     ##################################################################################################
-    train_object = Train(bucket, auth_object, template_stack_local_path, train_script_local_path,
-                         requirements_local_path, train_lbd_local_path, instance_type, ami,
-                         device_size, region=region)
+    train_object = T.Train(bucket, auth_object, train_script_local_path,
+                         requirements_local_path, instance_type, device_size)
 
 
     prep_env_response = train_object.prepare_env()
@@ -62,9 +54,8 @@ if __name__ == "__main__":
     template_deployment_stack_local_path = f"{local_rep}/clf_deployment_stack.json"
     deployment_lbd_local_path = f"{local_rep}/lambda_deployment.zip"
 
-    DeployObject = Deploy(bucket, model_s3_key, input_model_type, auth_object,
-                          template_deployment_stack_local_path, deployment_lbd_local_path ,
-                          region=region)
+    DeployObject = D.Deploy(bucket, model_s3_key, input_model_type, auth_object)
+
     print("[Deployment] prepare_env...")
     deployment_prepare_env = DeployObject.prepare_deployment()
 
@@ -72,3 +63,6 @@ if __name__ == "__main__":
     api_url = DeployObject.deploy(deployment_prepare_env)
 
     print(api_url)
+
+
+
