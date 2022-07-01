@@ -3,7 +3,23 @@ from botocore.exceptions import ClientError
 from TrainNomenclature import *
 from train_helper import generate_job_id, upload_file_to_s3, create_train_clf_stack, progress_bar, get_train_ec2_instance_status, run_ec2_command, get_command_status, terminate_instance, delete_clf_stack
 
-
+"""
+Classe pyhton pour la création des ressources AWS via une pile CloudFormation
+Les ressources créées sont: 
+        * pile CloudFormation
+        * roles IAM
+        * InstanceProfil
+        * Lambda
+        * EC2
+offre plusieurs methodes de classe :
+        * prepare_env()
+        * create_clf_stack()
+        * get_clf_stack_status()
+        * lunch_train_ec2()
+        * install_requerments()
+        * lunch_train_script()
+        * delete_ressources()
+"""
 class Train:
     def __init__(self,
                      bucket,
@@ -13,9 +29,9 @@ class Train:
                      requirements_local_path,
                      train_lbd_local_path,
                      instance_type,
-                     ami,
                      device_size,
-                     region=None
+                     ami = "ami-0d9858aa3c6322f73",
+                     region = "us-west-1"
                      ):
         self.bucket = bucket
         self.template_stack_local_path = template_stack_local_path
@@ -34,8 +50,13 @@ class Train:
 
     def prepare_env(self):
         """
-        charger les fichiers: train.py, requirements.txt, stack_template.json et lbd_train.py vers S3
-        :return: les keys S3 des fichiers chargés vers S3
+            charger les fichiers suivants vers S3:
+                        * train.py : script d'entrainement
+                        * requirements.txt : fichier contanant les lib necessaires pour l'execution de <train.py>
+                        * stack_template.json : template CloudFormation pour les ressources d'entrainement
+                        * lbd_train.py vers S3 : code source de la lambda d'entrainement
+            :return: les keys S3 des fichiers chargés vers S3
+            génère une exception en cas d'échec de chargement des fichiers vers s3
         """
         s3_client = boto3.client('s3', aws_access_key_id=self.access_key_id,
                                  aws_secret_access_key=self.secret_access_key, region_name=self.region)
@@ -61,8 +82,12 @@ class Train:
 
     def create_clf_stack(self, prepare_env_response, invoke_mode=0):
         """
-        :param prepare_env_response: l'objet retourné par prepare_env()
-        :return:
+            :param prepare_env_response: l'objet retourné par prepare_env()
+            :param invoke_mode : mode d'invocation [0:synchrone, 1: asynchrone]
+            :return:
+                    * stack_id: ID de la stack créée pour les appels synchrones
+                    * stack_status : le statut de la création de la stack pour les appels asynchrones
+            génère une exception en cas d'échec de création de la stack CloudFormation
         """
         if invoke_mode not in [0, 1]:
             raise Exception("valeurs acceptées pour invoke_mode: [0:synchrone, 1: asynchrone]")
@@ -140,7 +165,7 @@ class Train:
                         logging.info(f"[TRAIN]:statut creation CloudFormation: {clf_stack_status}")
                         return clf_stack_status
                     elif clf_stack_status == 'CREATE_IN_PROGRESS':
-                        progress_bar(iter)
+                        progress_bar(iter, "Création stack...")
                         iter+=1
                     else:
                         logging.error(f"[TRAIN]:statut creation CloudFormation: {clf_stack_status}")
@@ -158,7 +183,8 @@ class Train:
     def get_clf_stack_status(self, stack_name):
         """
         :param stack_name: le nom de la stack CloudFormation
-        :return: le status en cours
+        :return: le status en cours de la stack <stack_name>
+        génère une exception en cas d'échec à l'appel <boto3.client.describe_stacks()>
         """
         clf_client = boto3.client('cloudformation', aws_access_key_id=self.access_key_id,
                                   aws_secret_access_key=self.secret_access_key, region_name=self.region)
@@ -174,6 +200,12 @@ class Train:
 
 
     def lunch_train_ec2(self, invoke_mode=0):
+        """
+            :param invoke_mode : mode d'invocation [0:synchrone, 1: asynchrone]
+            :return: l'id unique de l'instance d'entrainement si le lancement de l'ec2 est OK
+            excecute la lambda de création d'instance d'entraienemt et configure la VM
+            génère une exception en cas où la création de l'instance est KO
+        """
         if invoke_mode not in [0, 1]:
             raise Exception("valeurs acceptées pour invoke_mode: [0:synchrone, 1: asynchrone]")
 
@@ -196,7 +228,7 @@ class Train:
                     if instance_status == 'running':
                         return instance_id
                     elif instance_status == 'pending':
-                        progress_bar(iter)
+                        progress_bar(iter, "Lancement EC2...")
                         iter+=1
                     else:
                         raise Exception(f"status de l'instance d'entrainement en erreur : {instance_status}")
@@ -206,6 +238,12 @@ class Train:
 
 
     def install_requerments(self, instance_id, invoke_mode=0):
+        """
+                :param invoke_mode : mode d'invocation [0:synchrone, 1: asynchrone]
+                :return: l'id unique de l'instance d'entrainement si le lancement de l'ec2 est OK
+                excecute la lambda de création d'instance d'entraienemt et configure la VM
+                génère une exception en cas où la création de l'instance est KO
+        """
         if invoke_mode not in [0, 1]:
             raise Exception("valeurs acceptées pour invoke_mode: [0:synchrone, 1: asynchrone]")
         requirements_file_name = "requirements.txt"
@@ -222,15 +260,21 @@ class Train:
             if cmd_status["status"] == "Success":
                 return cmd_status
             if cmd_status["status"] in ['Pending', 'InProgress', 'Delayed']:
-                progress_bar(iter)
+                progress_bar(iter, "Installation requirements...")
                 iter+=1
                 continue
-            return {
-                "status" : "failed",
-                "status_details" : cmd_status["status_details"]
-            }
+            logging.error("l'installation des librairies a echoué...")
+            raise Exception(cmd_status["status_details"])
+
 
     def lunch_train_script(self, instance_id, invoke_mode=0):
+        """
+                excecute le script d'entrainement dans la machine d'id : <instance_id>
+                :param invoke_mode : mode d'invocation [0:synchrone, 1: asynchrone]
+                :param instance_id: l'id unique de l'instance d'entrainement
+                :return: le status d'execution du script d'entrainement
+                génère une exception en cas où l'entrainement est KO
+        """
         if invoke_mode not in [0, 1]:
             raise Exception("valeurs acceptées pour invoke_mode: [0:synchrone, 1: asynchrone]")
 
@@ -250,21 +294,23 @@ class Train:
             if cmd_status["status"] == "Success":
                 return cmd_status
             if cmd_status["status"] in ['Pending', 'InProgress', 'Delayed']:
-                progress_bar(iter)
+                progress_bar(iter, "Entrainement modèle...")
                 iter += 1
                 continue
-            return {
-                "status": "failed",
-                "status_details": cmd_status["status_details"]
-            }
+            logging.error("l'execution du script d'entrainemet a echoué...")
+            raise Exception(cmd_status["status_details"])
+
 
 
     def delete_resources(self, instance_id):
+        """
+        :param instance_id: l'id unique de l'instance d'entrainement
+            * supprimer la stack CloudFormation
+            * Resilier l'instance d'entrainement à la fin du process
+        """
         stack_name = self.nomenclature_object.get_train_stack_name()
         terminate_instance(instance_id, self.access_key_id, self.secret_access_key, self.region)
         delete_clf_stack(stack_name, self.access_key_id, self.secret_access_key, self.region)
-
-
 
 
 

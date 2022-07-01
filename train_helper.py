@@ -27,8 +27,8 @@ def create_train_clf_stack(clf_client,
         )
         return clf_response['StackId']
     except ClientError as cle:
-        logging.error(f"creation de la stack echouée... {cle}")
-        return None
+        logging.error(f"creation de la stack echouée...")
+        raise Exception(cle)
 
 def run_ec2_command(instance_id, commands, aws_access_key_id, aws_secret_access_key, region):
     ssm_client = boto3.client('ssm', aws_access_key_id = aws_access_key_id, aws_secret_access_key = aws_secret_access_key, region_name = region)
@@ -127,8 +127,8 @@ def delete_clf_stack(stack_id, access_key_id, secret_access_key, region):
         raise Exception(cle)
 
 
-def progress_bar(i):
-    sys.stdout.write("\r|%s>" % ('='*i))
+def progress_bar(i, comment):
+    sys.stdout.write(f"\r|%s> {comment}" % ('='*i))
     sys.stdout.flush()
 
 

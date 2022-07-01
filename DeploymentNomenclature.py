@@ -31,3 +31,10 @@ class DeploymentNomenclature:
             "s3_url": s3_url
         }
 
+    def get_s3_prepro_fn_location(self):
+        return f"domaine=repository/table=preprocessing_fn/jobid={self.job_id}/Dillfn"
+
+    def get_S3_dill_zip_location(self):
+        return f"domaine=repository/table=layers/jobid={self.job_id}/layer.zip"
+
+

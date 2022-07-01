@@ -1,6 +1,6 @@
-import uuid, sys, logging, boto3, json
+import uuid, sys, logging, boto3, json, dill
 from botocore.exceptions import ClientError
-
+import pickle, inspect
 
 def generate_job_id():
     return uuid.uuid4().__str__()
@@ -8,7 +8,7 @@ def generate_job_id():
 def upload_file_to_s3(s3_client, local_path, bucket, s3_key):
     s3_client.upload_file(local_path, bucket, s3_key)
 
-def create_train_clf_stack(clf_client,
+def create_deployment_clf_stack(clf_client,
                      stack_name: str,
                      template_url: str,
                      list_parameters: list
@@ -22,8 +22,8 @@ def create_train_clf_stack(clf_client,
         )
         return clf_response['StackId']
     except ClientError as cle:
-        logging.error(f"creation de la stack echouée... {cle}")
-        return None
+        logging.error(f"creation de la stack echouée...")
+        raise Exception(cle)
 
 
 def get_restapi_id(job_id, access_key_id, secret_access_key, region):
@@ -71,7 +71,18 @@ def get_api_endpoint(job_id, access_key_id, secret_access_key, region):
         raise Exception(exp)
 
 
-
-def progress_bar(i):
-    sys.stdout.write("\r|%s>" % ('='*i))
+def progress_bar(i, comment):
+    sys.stdout.write(f"\r|%s> {comment}" % ('='*i))
     sys.stdout.flush()
+
+
+def fn_to_pickle(workdir, fun):
+    file_path = f"{workdir}/Dillfn"
+    dill.dump(fun, open(file_path, 'wb'))
+    return file_path
+
+
+
+
+
+
