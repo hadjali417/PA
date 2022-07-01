@@ -26,8 +26,10 @@ sudo yum -y install python-pip
 pip3.8 install awscli
 mkdir appli
 chmod 777 appli
-aws s3 cp """ + script_score_key + """ appli/
-aws s3 cp """ + script_requirements_key + """ appli/
+sudo aws s3 cp """ + script_score_key + """ appli/
+sudo aws s3 cp """ + script_requirements_key + """ appli/
+chmod -R 777 appli
+sleep 15
 """
 
 

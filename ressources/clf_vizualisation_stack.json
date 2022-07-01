@@ -1,0 +1,27 @@
+{
+    "AWSTemplateFormatVersion": "2010-09-09",
+    "Parameters" : {
+        "DashboardNameParameter": {
+            "Type": "String",
+            "Description": "Nom unique pour le dashboard CloudwWatch"
+        },
+        "APINameParameter": {
+            "Type": "String",
+            "Description": "Nom unique de l'api à visualiser"
+        }
+    },
+    "Resources": {
+        "DASHBOARD": {
+            "Type": "AWS::CloudWatch::Dashboard",
+            "Properties": {
+                "DashboardBody": {
+                    "Fn::Sub" : [
+                        "{\"widgets\":[{\"type\":\"explorer\",\"x\":0,\"y\":0,\"width\":24,\"height\":15,\"properties\":{\"metrics\":[{\"metricName\":\"4XXError\",\"resourceType\":\"AWS::ApiGateway::RestApi\",\"stat\":\"Sum\"},{\"metricName\":\"5XXError\",\"resourceType\":\"AWS::ApiGateway::RestApi\",\"stat\":\"Sum\"},{\"metricName\":\"CacheHitCount\",\"resourceType\":\"AWS::ApiGateway::RestApi\",\"stat\":\"Sum\"},{\"metricName\":\"CacheMissCount\",\"resourceType\":\"AWS::ApiGateway::RestApi\",\"stat\":\"Sum\"},{\"metricName\":\"Count\",\"resourceType\":\"AWS::ApiGateway::RestApi\",\"stat\":\"Sum\"},{\"metricName\":\"IntegrationLatency\",\"resourceType\":\"AWS::ApiGateway::RestApi\",\"stat\":\"Average\"},{\"metricName\":\"Latency\",\"resourceType\":\"AWS::ApiGateway::RestApi\",\"stat\":\"Average\"}],\"labels\":[{\"key\":\"ApiName\",\"value\":\"${APIName}\"}],\"widgetOptions\":{\"legend\":{\"position\":\"bottom\"},\"view\":\"timeSeries\",\"stacked\":false,\"rowsPerPage\":30,\"widgetsPerRow\":2},\"period\":60,\"splitBy\":\"ApiName\",\"region\":\"us-west-1\",\"title\":\"DeploymentAPI\"}}]}",
+                        {"APIName": { "Ref" : "APINameParameter" }}
+                    ]
+                } ,
+                "DashboardName": { "Ref" : "DashboardNameParameter" }
+            }
+        }
+    }
+}

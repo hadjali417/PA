@@ -20,6 +20,10 @@
             "Type" : "String",
             "Description" : "ID unique de deploiement"
       },
+      "S3LayerZipParameter": {
+            "Type" : "String",
+            "Description" : "Key s3 contant le zip du Layer dill"
+      },
       "Bucket": {
             "Type" : "String",
             "Description" : "Bucket où recuperer les codes de ressources"
@@ -32,7 +36,7 @@
             "Type" : "String",
             "Description" : "s3 key contenant le code model de prediction"
       },
-      "InputModelTypeParameter": {
+      "PreProcessingInputModelParameter": {
             "Type" : "String",
             "Description" : "Type attendu en entrée du model de prédiction"
       },
@@ -103,6 +107,37 @@
                                         ],
                                         "Resource":"arn:aws:lambda:*"
                                     }
+                                ]
+                            }
+                        },
+                      {
+                            "PolicyName" : "DeploymentCloudWatchAccessPolicy",
+                            "PolicyDocument" : {
+                                "Version": "2012-10-17",
+                                "Statement": [
+                                      {
+                                          "Action": [
+                                              "autoscaling:Describe*",
+                                              "cloudwatch:*",
+                                              "logs:*",
+                                              "sns:*",
+                                              "iam:GetPolicy",
+                                              "iam:GetPolicyVersion",
+                                              "iam:GetRole"
+                                          ],
+                                          "Effect": "Allow",
+                                          "Resource": "*"
+                                      },
+                                      {
+                                          "Effect": "Allow",
+                                          "Action": "iam:CreateServiceLinkedRole",
+                                          "Resource": "arn:aws:iam::*:role/aws-service-role/events.amazonaws.com/AWSServiceRoleForCloudWatchEvents*",
+                                          "Condition": {
+                                              "StringLike": {
+                                                  "iam:AWSServiceName": "events.amazonaws.com"
+                                              }
+                                          }
+                                      }
                                 ]
                             }
                         }
@@ -233,6 +268,23 @@
               },
              "DependsOn": "GETPREDICTION"
       },
+      "DILLLAYER": {
+              "Type" : "AWS::Lambda::LayerVersion",
+              "Properties" : {
+                "CompatibleRuntimes": [
+                      "python3.6",
+                      "python3.7",
+                      "python3.8",
+                      "python3.9"
+                ],
+                "Content" : {
+                      "S3Bucket": {"Ref": "Bucket"},
+                      "S3Key": {"Ref": "S3LayerZipParameter"}
+                },
+                  "Description" : "Layer pour la serialisation des object python",
+                  "LayerName" : "dill"
+                }
+      },
       "LBDREQUESTPROCESSOR": {
             "Type": "AWS::Lambda::Function",
             "Properties":{
@@ -244,14 +296,20 @@
                 },
               "Environment":{
                 "Variables":{
+                  "BUCKET" : {"Ref": "Bucket"},
                   "JOBID": { "Ref" : "JobID" },
                   "MODEL_S3_KEY": { "Ref" : "ModelS3KeyParameter" },
-                  "INPUT_MODEL_TYPE": { "Ref" : "InputModelTypeParameter" }
+                  "PREPRO_FN": { "Ref" : "PreProcessingInputModelParameter" }
                 }
               },
-              "Timeout":120,
+              "Timeout":180,
               "Role":{ "Fn::GetAtt" : [ "DeploymentRole", "Arn" ] },
-              "Runtime":"python3.6",
+              "Runtime":"python3.8",
+              "Layers" : [
+                {"Ref" : "DILLLAYER" },
+                "arn:aws:lambda:us-west-1:446751924810:layer:python-3-8-scikit-learn-0-23-1:2",
+                "arn:aws:lambda:us-west-1:325793726646:layer:AWSLambda-Python38-SciPy1x:107"
+              ],
               "Description": "Traitement de la requete de prediction",
               "Tags":[
                     {
