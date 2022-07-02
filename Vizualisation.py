@@ -3,6 +3,10 @@ from VizualisationNomenclature import *
 from vizualisation_helper import create_viz_clf_stack, upload_file_to_s3, progress_bar, get_dashboard_name, generate_job_id
 from botocore.exceptions import ClientError
 
+
+"""
+Classe python pour la création de resossources necessaires pour la cr
+"""
 class Vizualisation:
     def __init__(self,
                  bucket : str,

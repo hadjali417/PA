@@ -5,6 +5,19 @@ from DeploymentNomenclature import *
 from deployment_helper import generate_job_id, upload_file_to_s3, create_deployment_clf_stack, progress_bar, get_api_endpoint, fn_to_pickle
 
 
+"""
+Classe pyhton pour la création des resossources necessaires pour le deploiement du modèle entrainé
+Les ressources suivantes sont créées via une pile CloudFormation:
+        * pile CloudFormation
+        * Roles IAM
+        * Lambda
+        * API Gateway
+offre plusieurs méthode de classe: 
+        * prepare_deployment()
+        * create_stack()
+        * get_clf_stack_status()
+        * deploy()
+"""
 class Deploy:
     def __init__(self,
                  bucket: str,
@@ -33,8 +46,14 @@ class Deploy:
 
     def prepare_deployment(self):
         """
-        Charger vers s3 le template CloudFormation et le code la Lambda RequestProcesssor
-        :return: les keys S3 des fichiers chargés vers S3
+            charger les fichiers suivants vers S3:
+                        * layer.zip: un zip contenant le layer <dill>
+                        * prepro_fn.pkl : un pickle contetant la fonction de préprocessing pérsonnalisée fournie par l'utilsateur
+                        * stack_template.json : template CloudFormation pour les ressources de deploiement
+                        * lbd_request_processor.py vers S3 : code source de la lambda de deploiement
+            :return: dict
+                        les keys S3 des fichiers chargés vers S3
+            génère une exception en cas d'échec de chargement des fichiers vers s3
         """
         s3_client = boto3.client('s3', aws_access_key_id=self.access_key_id,
                                  aws_secret_access_key=self.secret_access_key, region_name=self.region)
@@ -60,6 +79,17 @@ class Deploy:
 
 
     def create_stack(self, prepare_env_response, invoke_mode=0):
+        """
+            :param prepare_env_response: l'objet retourné par méthode prepare_env()
+            :param invoke_mode: mode d'invocation [0:synchrone, 1: asynchrone]
+            :return: dict
+                    * mode sysnchrone:
+                                * stack_id : ID unique de la pile CloudFormation de deploiement
+                                * stack_name : Nom unique de la pile CloudFormation de deploiement
+                    * mode asynchrone:
+                                * le statut de création de la pile CloudFormation de deploiement
+            génère une exception en cas d'échec de création de la stack CloudFormation
+        """
         if invoke_mode not in [0, 1]:
             raise Exception("valeurs acceptées pour invoke_mode: [0:synchrone, 1: asynchrone]")
 
@@ -148,8 +178,11 @@ class Deploy:
 
     def get_clf_stack_status(self, stack_name):
         """
-        :param stack_name: le nom de la stack CloudFormation
-        :return: le status en cours
+                :param stack_name: Nome unique de de la pile CloudFormation
+                :return: str
+                        le statut de la pile CloudFormation de deploiement
+
+                génère une exception en cas d'échec de création de la stack CloudFormation
         """
         clf_client = boto3.client('cloudformation', aws_access_key_id=self.access_key_id,
                                   aws_secret_access_key=self.secret_access_key, region_name=self.region)
@@ -165,6 +198,13 @@ class Deploy:
 
 
     def deploy(self, prepare_env_response, invoke_mode=0):
+        """
+        :param prepare_env_response: l'objet retourné par méthode prepare_env()
+        :param invoke_mode: mode d'invocation [0:synchrone, 1: asynchrone]
+        :return: dict
+                * api_name : Nom unique de l'API deployée
+                * api_endpoint : le point de terminaison de l'API déployée
+        """
         if invoke_mode not in [0, 1]:
             raise Exception("valeurs acceptées pour invoke_mode: [0:synchrone, 1: asynchrone]")
         self.create_stack(prepare_env_response, invoke_mode=invoke_mode)

@@ -4,7 +4,7 @@ from TrainNomenclature import *
 from train_helper import generate_job_id, upload_file_to_s3, create_train_clf_stack, progress_bar, get_train_ec2_instance_status, run_ec2_command, get_command_status, terminate_instance, delete_clf_stack
 
 """
-Classe pyhton pour la création des ressources AWS via une pile CloudFormation
+Classe pyhton pour la création des ressources AWS d'entrainement via une pile CloudFormation
 Les ressources créées sont: 
         * pile CloudFormation
         * roles IAM
@@ -55,7 +55,8 @@ class Train:
                         * requirements.txt : fichier contanant les lib necessaires pour l'execution de <train.py>
                         * stack_template.json : template CloudFormation pour les ressources d'entrainement
                         * lbd_train.py vers S3 : code source de la lambda d'entrainement
-            :return: les keys S3 des fichiers chargés vers S3
+            :return: dict
+                        les keys S3 des fichiers chargés vers S3
             génère une exception en cas d'échec de chargement des fichiers vers s3
         """
         s3_client = boto3.client('s3', aws_access_key_id=self.access_key_id,
@@ -84,7 +85,7 @@ class Train:
         """
             :param prepare_env_response: l'objet retourné par prepare_env()
             :param invoke_mode : mode d'invocation [0:synchrone, 1: asynchrone]
-            :return:
+            :return: dict
                     * stack_id: ID de la stack créée pour les appels synchrones
                     * stack_status : le statut de la création de la stack pour les appels asynchrones
             génère une exception en cas d'échec de création de la stack CloudFormation
@@ -183,12 +184,12 @@ class Train:
     def get_clf_stack_status(self, stack_name):
         """
         :param stack_name: le nom de la stack CloudFormation
-        :return: le status en cours de la stack <stack_name>
+        :return: str
+                    le status en cours de la stack <stack_name>
         génère une exception en cas d'échec à l'appel <boto3.client.describe_stacks()>
         """
         clf_client = boto3.client('cloudformation', aws_access_key_id=self.access_key_id,
                                   aws_secret_access_key=self.secret_access_key, region_name=self.region)
-
         try:
             clf_response = clf_client.describe_stacks(
                 StackName=stack_name
@@ -202,7 +203,8 @@ class Train:
     def lunch_train_ec2(self, invoke_mode=0):
         """
             :param invoke_mode : mode d'invocation [0:synchrone, 1: asynchrone]
-            :return: l'id unique de l'instance d'entrainement si le lancement de l'ec2 est OK
+            :return: str
+                        l'id unique de l'instance d'entrainement si le lancement de l'ec2 est OK
             excecute la lambda de création d'instance d'entraienemt et configure la VM
             génère une exception en cas où la création de l'instance est KO
         """
@@ -240,9 +242,10 @@ class Train:
     def install_requerments(self, instance_id, invoke_mode=0):
         """
                 :param invoke_mode : mode d'invocation [0:synchrone, 1: asynchrone]
-                :return: l'id unique de l'instance d'entrainement si le lancement de l'ec2 est OK
-                excecute la lambda de création d'instance d'entraienemt et configure la VM
-                génère une exception en cas où la création de l'instance est KO
+                :return: str
+                            l'id unique de la commande SSM lancée sur l'instance d'entraiment
+                Installe les lib necessaires pour l'entrainement du modèle
+                génère une exception dans le cas où la commande est KO
         """
         if invoke_mode not in [0, 1]:
             raise Exception("valeurs acceptées pour invoke_mode: [0:synchrone, 1: asynchrone]")
@@ -272,7 +275,8 @@ class Train:
                 excecute le script d'entrainement dans la machine d'id : <instance_id>
                 :param invoke_mode : mode d'invocation [0:synchrone, 1: asynchrone]
                 :param instance_id: l'id unique de l'instance d'entrainement
-                :return: le status d'execution du script d'entrainement
+                :return: str
+                            le status d'execution du script d'entrainement
                 génère une exception en cas où l'entrainement est KO
         """
         if invoke_mode not in [0, 1]:
@@ -307,6 +311,7 @@ class Train:
         :param instance_id: l'id unique de l'instance d'entrainement
             * supprimer la stack CloudFormation
             * Resilier l'instance d'entrainement à la fin du process
+        :return None
         """
         stack_name = self.nomenclature_object.get_train_stack_name()
         terminate_instance(instance_id, self.access_key_id, self.secret_access_key, self.region)
