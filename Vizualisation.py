@@ -5,7 +5,17 @@ from botocore.exceptions import ClientError
 
 
 """
-Classe python pour la création de resossources necessaires pour la cr
+Classe python pour la création des resossources necessaires pour la partie visualisation
+Permet de créer des dashboars pour un suivi à temps réel de l'API deployée
+la classe crée les ressources suivantes : 
+            * Pile CloudFomation
+            * Roles IAM
+            * Dashboards CloudWatch
+Contient les méthodes de classe suivantes:
+            * prepare_env()
+            * create_stack()
+            * get_clf_stack_status()
+            * vizualise()
 """
 class Vizualisation:
     def __init__(self,
@@ -24,6 +34,13 @@ class Vizualisation:
         self.api_name = api_name
 
     def prepare_env(self):
+        """
+                charger le fichier suivant vers S3:
+                            * stack_template.json : template CloudFormation pour les ressources de visualisation
+                :return: dict
+                            * url_s3_stack_template: url s3 vers le fichier stack_template.json
+                génère une exception en cas d'échec de chargement du fichier vers s3
+        """
         s3_client = boto3.client('s3', aws_access_key_id=self.access_key_id,
                                  aws_secret_access_key=self.secret_access_key, region_name=self.region)
 
@@ -39,6 +56,17 @@ class Vizualisation:
 
 
     def create_stack(self, prepare_env_response, invoke_mode=0):
+        """
+                :param prepare_env_response: l'objet retourné par méthode prepare_env()
+                :param invoke_mode: mode d'invocation [0:synchrone, 1: asynchrone]
+                :return: dict
+                        * mode sysnchrone:
+                                    * stack_id : ID unique de la pile CloudFormation de visualisation
+                                    * stack_name : Nom unique de la pile CloudFormation de visualisation
+                        * mode asynchrone:
+                                    * le statut de création de la pile CloudFormation de visualisation
+                génère une exception en cas d'échec de création de la pile CloudFormation
+        """
         if invoke_mode not in [0, 1]:
             raise Exception("valeurs acceptées pour invoke_mode: [0:synchrone, 1: asynchrone]")
 
@@ -88,8 +116,11 @@ class Vizualisation:
 
     def get_clf_stack_status(self, stack_name):
         """
-        :param stack_name: le nom de la stack CloudFormation
-        :return: le status en cours
+            :param stack_name: Nome unique de la pile CloudFormation
+            :return: str
+                    le statut de la pile CloudFormation de deploiement
+
+            génère une exception en cas d'échec de création de la pile CloudFormation
         """
         clf_client = boto3.client('cloudformation', aws_access_key_id=self.access_key_id,
                                   aws_secret_access_key=self.secret_access_key, region_name=self.region)
@@ -105,6 +136,12 @@ class Vizualisation:
 
 
     def vizualise(self, prepare_env_response, invoke_mode=0):
+        """
+            :param prepare_env_response: l'objet retourné par méthode prepare_env()
+            :param invoke_mode: mode d'invocation [0:synchrone, 1: asynchrone]
+            :return: str
+                        * Nome unique pour le dashboard de visualisation
+        """
         if invoke_mode not in [0, 1]:
             raise Exception("valeurs acceptées pour invoke_mode: [0:synchrone, 1: asynchrone]")
         self.create_stack(prepare_env_response, invoke_mode)

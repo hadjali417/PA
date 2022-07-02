@@ -80,7 +80,7 @@ class Deploy:
 
     def create_stack(self, prepare_env_response, invoke_mode=0):
         """
-            :param prepare_env_response: l'objet retourné par méthode prepare_env()
+            :param prepare_env_response: l'objet retourné par méthode prepare_deployment()
             :param invoke_mode: mode d'invocation [0:synchrone, 1: asynchrone]
             :return: dict
                     * mode sysnchrone:
@@ -88,7 +88,7 @@ class Deploy:
                                 * stack_name : Nom unique de la pile CloudFormation de deploiement
                     * mode asynchrone:
                                 * le statut de création de la pile CloudFormation de deploiement
-            génère une exception en cas d'échec de création de la stack CloudFormation
+            génère une exception en cas d'échec de création de la pile CloudFormation
         """
         if invoke_mode not in [0, 1]:
             raise Exception("valeurs acceptées pour invoke_mode: [0:synchrone, 1: asynchrone]")
@@ -178,7 +178,7 @@ class Deploy:
 
     def get_clf_stack_status(self, stack_name):
         """
-                :param stack_name: Nome unique de de la pile CloudFormation
+                :param stack_name: Nome unique de la pile CloudFormation
                 :return: str
                         le statut de la pile CloudFormation de deploiement
 

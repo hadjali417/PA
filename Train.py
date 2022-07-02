@@ -88,7 +88,7 @@ class Train:
             :return: dict
                     * stack_id: ID de la stack créée pour les appels synchrones
                     * stack_status : le statut de la création de la stack pour les appels asynchrones
-            génère une exception en cas d'échec de création de la stack CloudFormation
+            génère une exception en cas d'échec de création de la pile CloudFormation
         """
         if invoke_mode not in [0, 1]:
             raise Exception("valeurs acceptées pour invoke_mode: [0:synchrone, 1: asynchrone]")
