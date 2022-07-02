@@ -2,7 +2,7 @@ from UserAwsAuth import UserAwsAuth
 from botocore.exceptions import ClientError
 import boto3, logging, time
 from DeploymentNomenclature import *
-from deployment_helper import generate_job_id, upload_file_to_s3, create_deployment_clf_stack, progress_bar, get_api_endpoint, fn_to_pickle
+from deployment_helper import generate_job_id, upload_file_to_s3, create_deployment_clf_stack, progress_bar, get_api_endpoint, fn_to_pickle, delete_clf_stack
 
 
 """
@@ -214,3 +214,11 @@ class Deploy:
             "api_name" : api_name,
             "api_endpoint" : api_endpoint
         }
+
+    def delete_resources(self):
+        """ Permet de supprimer les ressources créées pour le deploiment
+            * supprimer la stack CloudFormation
+        :return None
+        """
+        stack_name = self.nomenclature_object.get_deployment_stack_name()
+        delete_clf_stack(stack_name, self.access_key_id, self.secret_access_key, self.region)

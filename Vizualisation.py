@@ -1,6 +1,6 @@
 import boto3, logging, time
 from VizualisationNomenclature import *
-from vizualisation_helper import create_viz_clf_stack, upload_file_to_s3, progress_bar, get_dashboard_name, generate_job_id
+from vizualisation_helper import create_viz_clf_stack, upload_file_to_s3, progress_bar, get_dashboard_name, generate_job_id, delete_clf_stack
 from botocore.exceptions import ClientError
 
 
@@ -146,6 +146,15 @@ class Vizualisation:
             raise Exception("valeurs acceptées pour invoke_mode: [0:synchrone, 1: asynchrone]")
         self.create_stack(prepare_env_response, invoke_mode)
         return get_dashboard_name(self.nomenclature_object)
+
+
+    def delete_resources(self):
+        """ Permet de supprimer les ressources créées pour la visualisation
+            * supprimer la stack CloudFormation
+        :return None
+        """
+        stack_name = self.nomenclature_object.get_viz_stack_name()
+        delete_clf_stack(stack_name, self.access_key_id, self.secret_access_key, self.region)
 
 
 
