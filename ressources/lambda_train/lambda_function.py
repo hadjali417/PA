@@ -78,7 +78,7 @@ def lambda_handler(event, context):
         Monitoring={
             'Enabled': True
         },
-        #KeyName='credential_test_pa',
+        KeyName='ec2-us-west-1',
         UserData=cmd_config
     )
 

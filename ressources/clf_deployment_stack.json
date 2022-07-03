@@ -56,6 +56,10 @@
       "RoleDeploymentNameParameter": {
             "Type" : "String",
             "Description" : "Nom unique du role à utiliser"
+        },
+      "ListFeatureParameter": {
+            "Type" : "String",
+            "Description" : "liste des variables obligatoire pour la prediction"
         }
     },
     "Resources": {
@@ -299,7 +303,8 @@
                   "BUCKET" : {"Ref": "Bucket"},
                   "JOBID": { "Ref" : "JobID" },
                   "MODEL_S3_KEY": { "Ref" : "ModelS3KeyParameter" },
-                  "PREPRO_FN": { "Ref" : "PreProcessingInputModelParameter" }
+                  "PREPRO_FN": { "Ref" : "PreProcessingInputModelParameter" },
+                  "LIST_FEATURES" : { "Ref" : "ListFeatureParameter" }
                 }
               },
               "Timeout":180,

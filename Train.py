@@ -83,7 +83,7 @@ class Train:
 
     def create_clf_stack(self, prepare_env_response, invoke_mode=0):
         """
-            :param prepare_env_response: l'objet retourné par prepare_env()
+            :param prepare_env_response: l'objet retourné par self.prepare_env()
             :param invoke_mode : mode d'invocation [0:synchrone, 1: asynchrone]
             :return: dict
                     * stack_id: ID de la stack créée pour les appels synchrones

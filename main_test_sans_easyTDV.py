@@ -2,14 +2,15 @@ from Train import *
 from Deploy import *
 from Vizualisation import *
 from UserAwsAuth import *
-import numpy as np
+
 
 
 def prepro_fn(input_model):
     import numpy as np
     age = float(input_model["age"])
     sex = float(input_model["sex"])
-    return np.array([age, sex]).reshape(-1, 2)
+    secteur_activite = float(input_model["secteur_activite"])
+    return np.array([age, sex, secteur_activite]).reshape(-1, 3)
 
 
 if __name__ == "__main__":
@@ -51,17 +52,18 @@ if __name__ == "__main__":
             print("\n========>train finished!")
 
     train_object.delete_resources(instance_id)
-
+"""
     ##################################################################################################
     ###################################Partie Deploiement############################################
     ##################################################################################################
     print("===============================>[Deployment]<===============================")
+    list_features = ["age", "sex", "secteur_activite"]
     template_deployment_stack_local_path = f"{local_rep}/clf_deployment_stack.json"
     deployment_lbd_local_path = f"{local_rep}/lambda_deployment.zip"
     dep_layer_zip_local_path = "C:/Users/lounhadja/PycharmProjects/projet_annuel_tdv_git/ressources/layers/python.zip"
     workdir = "C:/Users/lounhadja/PycharmProjects/projet_annuel_tdv_git"
 
-    DeployObject = Deploy(bucket, model_s3_key, prepro_fn, auth_object, template_deployment_stack_local_path, deployment_lbd_local_path, dep_layer_zip_local_path, workdir)
+    DeployObject = Deploy(bucket, model_s3_key, prepro_fn, auth_object, template_deployment_stack_local_path, deployment_lbd_local_path, dep_layer_zip_local_path, list_features, workdir)
 
     print("[Deployment] prepare_env...")
     deployment_prepare_env = DeployObject.prepare_deployment()
@@ -73,8 +75,7 @@ if __name__ == "__main__":
 
     api_name = api_response["api_name"]
 
-"""
-    api_name = "api-predection-289c3064-e54c-4715-88b4-af90de7fcb33"
+    #DeployObject.delete_resources()
     print("===============================>[Vizualisation]<===============================")
     template_viz_stack_local_path = f"{local_rep}/clf_vizualisation_stack.json"
     VizObject = Vizualisation(bucket, template_viz_stack_local_path, auth_object, api_name)
@@ -84,6 +85,8 @@ if __name__ == "__main__":
     dashboard_name = VizObject.vizualise(vizualisation_prepare_env)
 
     print(dashboard_name)
+
+    VizObject.delete_resources()
 
 
 

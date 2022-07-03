@@ -1,6 +1,7 @@
-import boto3, dill
+import boto3, dill, logging
 import pandas as pd
 import random
+from botocore.exceptions import ClientError
 from sklearn.model_selection import train_test_split
 from sklearn import linear_model
 
@@ -10,20 +11,42 @@ def model_to_pickle(workdir, fun):
     dill.dump(fun, open(file_path, 'wb'))
     return file_path
 
-def get_dataset():
-  df = pd.DataFrame(columns=["age", "sex", "salaire"])
-  df["age"] = [random.randint(18, 90) for i in range(1000)]
-  df["sex"] = [random.randint(0, 1) for i in range(1000)]
-  df["salaire"] = [random.randint(0, i*1000) for i in range(1000)]
-  return df
+
+def get_file_from_s3(bucket, s3_key):
+    pkl_local_path = '/tmp/dataset.csv'
+    s3_client = boto3.client('s3')
+    try:
+        s3_client.download_file(bucket, s3_key, pkl_local_path)
+    except ClientError as cle:
+        logging.error(f"impossible de recuperer le dataset depuis s3: {bucket}/{s3_key}")
+        logging.error(cle)
+        return {
+            "dataset_local_path" : None,
+            "log" : cle
+        }
+    return {
+            "dataset_local_path" : pkl_local_path,
+            "log" : "recuperation dataset terminé avec succès!"
+        }
+
+def get_dataset(bucket, s3_key):
+    dataset_local_path_res = get_file_from_s3(bucket, s3_key)
+    dataset_local_path = dataset_local_path_res["dataset_local_path"]
+    if dataset_local_path is None:
+        raise Exception("dateset not found!")
+    return pd.read_csv(dataset_local_path, sep='|')
+
 
 
 if __name__=="__main__":
     workdir = "/appli"
+    bucket = "pa-2022-1"
+    s3_key_model = "domaine=model/modelPKL"
+    s3_key_dataset = "domaine=datasets/dataset_salaries.csv"
 
-    df_salaries = get_dataset()
+    df_salaries = get_dataset(bucket, s3_key_dataset)
 
-    df_x = pd.DataFrame(df_salaries, columns=['age', 'sex'])
+    df_x = pd.DataFrame(df_salaries, columns=['age', 'sex', 'secteur_activite'])
     df_y = pd.DataFrame(df_salaries, columns=["salaire"])
 
     reg_model = linear_model.LinearRegression()
@@ -37,8 +60,8 @@ if __name__=="__main__":
 
     s3_client.upload_file(
         model_local_path,
-        "pa-2022",
-        "domaine=model/modelPKL"
+        bucket,
+        s3_key_model
     )
 
 

@@ -27,6 +27,7 @@ class Deploy:
                  template_stack_local_path,
                  deployment_lbd_local_path,
                  layer_zip_local_path,
+                 list_features,
                  workdir: str,
                  region = "us-west-1"
                  ):
@@ -42,6 +43,7 @@ class Deploy:
         self.template_stack_local_path = template_stack_local_path
         self.deployment_lbd_local_path = deployment_lbd_local_path
         self.layer_zip_local_path = layer_zip_local_path
+        self.list_features = list_features
 
 
     def prepare_deployment(self):
@@ -143,6 +145,10 @@ class Deploy:
             {
                 'ParameterKey': 'S3LayerZipParameter',
                 'ParameterValue': s3_layer_dill_location
+            },
+            {
+                'ParameterKey': 'ListFeatureParameter',
+                'ParameterValue': self.list_features.__str__()
             }
         ]
         try:

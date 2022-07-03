@@ -6,14 +6,29 @@ def lambda_handler(event, context):
     prepro_fn_s3_key = os.environ["PREPRO_FN"]
     model_s3_key = os.environ["MODEL_S3_KEY"]
     bucket = os.environ["BUCKET"]
+    list_features = json.loads(os.environ["LIST_FEATURES"].replace("\'", "\""))
 
     if event["queryStringParameters"] is None:
         return {
             'statusCode': 400,
-            'body': json.dumps("Le parametre <input_modelL> est obligatoire! ")
+            'body': json.dumps(f"Aucun parametre passé en entrée!...Veuillez inclure le(s) parametre(s) requis pour la prediction! : {list_features}")
         }
 
     input_model = event["queryStringParameters"]
+
+    all_param_required = True
+    list_param_abs = []
+    for feature in list_features:
+        if feature not in input_model.keys():
+            all_param_required = False
+            list_param_abs.append(feature)
+
+    if all_param_required == False:
+        return {
+            'statusCode': 400,
+            'body': json.dumps(f"Les parametres suivants (obligatoires) sont manquants : {list_param_abs}")
+        }
+
 
     ##################################### recupération fonction preprocessing #######################################
     get_fn_pickle_response = get_file_from_s3(bucket, prepro_fn_s3_key)

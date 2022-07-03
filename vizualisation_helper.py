@@ -79,6 +79,7 @@ def progress_bar(i, comment):
     sys.stdout.write(f"\r|%s> {comment}" % ('='*i))
     sys.stdout.flush()
 
+
 def get_dashboard_name(nomenclature_object):
     """
     :param nomenclature_object: object de la classe TrainNomenclature
